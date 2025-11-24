@@ -1,62 +1,77 @@
-# src/test.py
+
 import unittest
 from unittest.mock import patch
-import random
+from main import add, subtract, multiply, divide, calculator
 
-# Now imports work perfectly!
-from basic_math_program import generate_question, welcome, choose_operation
+class TestCalculator(unittest.TestCase):
 
+    # ------------------- ADD -------------------
+    def test_add(self):
+        self.assertEqual(add(3, 4), 7)
+        self.assertEqual(add(-1, 5), 4)
+        self.assertAlmostEqual(add(2.5, 1.2), 3.7)
 
-class TestBasicMathProgram(unittest.TestCase):
+    # ------------------- SUBTRACT -------------------
+    def test_subtract(self):
+        self.assertEqual(subtract(10, 3), 7)
+        self.assertEqual(subtract(0, 5), -5)
+        self.assertAlmostEqual(subtract(5.5, 2.2), 3.3)
 
-    def setUp(self):
-        random.seed(42)
+    # ------------------- MULTIPLY -------------------
+    def test_multiply(self):
+        self.assertEqual(multiply(4, 5), 20)
+        self.assertEqual(multiply(-2, 3), -6)
+        self.assertAlmostEqual(multiply(2.5, 2), 5.0)
+        self.assertEqual(multiply(5, 0), 0)
 
-    def test_generate_question_addition(self):
-        q, a = generate_question("1")
-        self.assertIn(" + ", q)
-        x, y = map(int, [part for part in q.split() if part.isdigit()])
-        self.assertEqual(a, x + y)
+    # ------------------- DIVIDE -------------------
+    def test_divide(self):
+        self.assertEqual(divide(10, 2), 5)
+        self.assertAlmostEqual(divide(7.5, 2.5), 3.0)
+        self.assertEqual(divide(-10, 2), -5)
+        self.assertEqual(divide(10, -2), -5)
+        self.assertEqual(divide(-10, -2), 5)
 
-    def test_generate_question_subtraction(self):
-        q, a = generate_question("2")
-        self.assertIn(" - ", q)
-        parts = q.replace(" =", "").split()
-        x, y = int(parts[0]), int(parts[2])
-        self.assertGreaterEqual(x, y)
-        self.assertEqual(a, x - y)
+    def test_divide_by_zero(self):
+        self.assertEqual(divide(5, 0), "Error: Cannot divide by zero!")
+        self.assertEqual(divide(0, 0), "Error: Cannot divide by zero!")
 
-    def test_generate_question_multiplication(self):
-        q, a = generate_question("3")
-        self.assertIn(" × ", q)
-        parts = q.replace(" × ", " ").replace(" = ?", "").split()
-        x, y = int(parts[0]), int(parts[1])
-        self.assertEqual(a, x * y)
-
-    def test_generate_question_division(self):
-        q, a = generate_question("4")
-        self.assertIn(" ÷ ", q)
-        parts = q.split(" ÷ ")
-        x = int(parts[0])
-        y = int(parts[1].split()[0])
-        self.assertEqual(x % y, 0)
-        self.assertEqual(a, x // y)
-
-    def test_mixed_mode(self):
-        ops = set()
-        for _ in range(30):
-            q, _ = generate_question("5")
-            for op in ["+", "-", "×", "÷"]:
-                if op in q:
-                    ops.add(op)
-        self.assertEqual(len(ops), 4)
-
-    @patch('builtins.input', side_effect=["Alice", "1", "10", "20", "30", "n"])
+    # ------------------- FULL CALCULATOR INTERACTIVE TEST -------------------
+    @patch('builtins.input', side_effect=['10', '5', '+'])
     @patch('builtins.print')
-    def test_full_game_flow(self, mock_print, mock_input):
-        from basic_math_program import play_game
-        play_game()  # Should run without errors
+    def test_calculator_add(self, mock_print, mock_input):
+        calculator()
+        mock_print.assert_any_call(15)
 
+    @patch('builtins.input', side_effect=['10', '5', '-'])
+    @patch('builtins.print')
+    def test_calculator_subtract(self, mock_print, mock_input):
+        calculator()
+        mock_print.assert_any_call(5)
+
+    @patch('builtins.input', side_effect=['10', '5', '*'])
+    @patch('builtins.print')
+    def test_calculator_multiply(self, mock_print, mock_input):
+        calculator()
+        mock_print.assert_any_call(50)
+
+    @patch('builtins.input', side_effect=['10', '5', '/'])
+    @patch('builtins.print')
+    def test_calculator_divide(self, mock_print, mock_input):
+        calculator()
+        mock_print.assert_any_call(2.0)
+
+    @patch('builtins.input', side_effect=['10', '0', '/'])
+    @patch('builtins.print')
+    def test_calculator_divide_by_zero(self, mock_print, mock_input):
+        calculator()
+        mock_print.assert_any_call("Error: Cannot divide by zero!")
+
+    @patch('builtins.input', side_effect=['10', '5', '^'])
+    @patch('builtins.print')
+    def test_calculator_invalid_op(self, mock_print, mock_input):
+        calculator()
+        mock_print.assert_any_call("Invalid operation!")
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
