@@ -1,152 +1,137 @@
-# src/test.py
+# test_math_program.py
 import unittest
 from unittest.mock import patch, MagicMock
+import builtins
+import random
+import sys
+from io import StringIO
 
-# Import your actual game class
-# Make sure your main game file is named xo_game.py in src/
-from xo_game import TicTacToe
+# Import your main program functions
+# Make sure your main file is named: basic_math_program.py
+from basic_math_program import generate_question, welcome, choose_operation
 
 
-class TestTicTacToeGame(unittest.TestCase):
+class TestBasicMathProgram(unittest.TestCase):
 
     def setUp(self):
-        # Prevent any real window from opening
-        self.patcher_tk = patch("tkinter.Tk")
-        self.patcher_msg = patch("tkinter.messagebox.showinfo")
-        self.patcher_sound = patch("winsound.Beep", return_value=None)
+        # Fix random seed for predictable tests
+        random.seed(42)
 
-        self.patcher_tk.start()
-        self.mock_msgbox = self.patcher_msg.start()
-        self.patcher_sound.start()
+    # Test 1: Addition questions
+    def test_generate_question_addition(self):
+        question, answer = generate_question("1")
+        self.assertIn(" + ", question)
+        a, b = map(int, question.split(" + ")[0]), int(question.split(" + ")[1].split(" =")[0])
+        self.assertEqual(answer, a + b)
 
-        # Create real game instance (it will use mocks)
-        self.game = TicTacToe()
+    # Test 2: Subtraction questions (no negative results)
+    def test_generate_question_subtraction(self):
+        question, answer = generate_question("2")
+        self.assertIn(" - ", question)
+        parts = question.split(" - ")
+        a = int(parts[0])
+        b = int(parts[1].split(" =")[0])
+        self.assertGreaterEqual(a, b)  # Ensures no negative answers
+        self.assertEqual(answer, a - b)
 
-        # Replace real Tkinter buttons with simple dictionaries
-        self.game.buttons = [
-            [{"text": "", "state": "normal"} for _ in range(3)]
-            for _ in range(3)
-        ]
+    # Test 3: Multiplication questions
+    def test_generate_question_multiplication(self):
+        question, answer = generate_question("3")
+        self.assertIn(" × ", question)
+        a, b = map(int, question.replace(" × ", " ").replace(" = ?", "").split())
+        self.assertEqual(answer, a * b)
 
-        # Add .config() and .cget() methods to make original code work
-        for row in self.game.buttons:
-            for btn in row:
-                btn["config"] = lambda **kwargs, b=btn: b.update(kwargs)
-                btn["cget"] = lambda key, b=btn: b[key]
+    # Test 4: Division questions (always exact)
+    def test_generate_question_division(self):
+        question, answer = generate_question("4")
+        self.assertIn(" ÷ ", question)
+        parts = question.split(" ÷ ")
+        a = int(parts[0])
+        b = int(parts[1].split(" =")[0])
+        self.assertEqual(a % b, 0)  # Must be perfectly divisible
+        self.assertEqual(answer, a // b)
 
-        # Reset game state
-        self.game.current_player = "X"
-        self.game.score_x = 0
-        self.game.score_o = 0
-        self.game.total_games = 0
+    # Test 5: Mixed mode uses all operations
+    def test_generate_question_mixed(self):
+        operations_seen = set()
+        for _ in range(20):  # Run 20 times to catch variety
+            question, _ = generate_question("5")
+            if "+" in question:
+                operations_seen.add("+")
+            if "-" in question:
+                operations_seen.add("-")
+            if "×" in question:
+                operations_seen.add("×")
+            if "÷" in question:
+                operations_seen.add("÷")
+        self.assertEqual(len(operations_seen), 4)  # Must see all 4
 
-        # Mock player name (safe by default)
-        self.game.player_name_var = MagicMock()
-        self.game.player_name_var.get.return_value = "Player"
+    # Test 6: Welcome function returns name
+    @patch('builtins.input', return_value="Alice")
+    def test_welcome_returns_name(self, mock_input):
+        # Capture print output
+        with patch('builtins.print'):
+            name = welcome()
+        self.assertEqual(name, "Alice")
 
-        # Capture all messagebox calls
-        self.shown_messages = []
-        self.mock_msgbox.side_effect = lambda title, msg: self.shown_messages.append(msg)
+    @patch('builtins.input', return_value="")
+    def test_welcome_default_name(self, mock_input):
+        with patch('builtins.print'):
+            name = welcome()
+        self.assertEqual(name, "Student")
 
-    def tearDown(self):
-        patch.stopall()
+    # Test 7: Choose operation validation
+    @patch('builtins.input', side_effect=["99", "abc", "3"])
+    def test_choose_operation_invalid_then_valid(self, mock_input):
+        with patch('builtins.print'):
+            result = choose_operation()
+        self.assertEqual(result, "3")
 
-    def test_initial_board_is_empty(self):
-        for r in range(3):
-            for c in range(3):
-                self.assertEqual(self.game.buttons[r][c]["text"], "")
+    @patch('builtins.input', return_value="5")
+    def test_choose_operation_mixed(self, mock_input):
+        with patch('builtins.print'):
+            result = choose_operation()
+        self.assertEqual(result, "5")
 
-    def test_x_places_mark_correctly(self):
-        self.game.on_click(0, 0)
-        self.assertEqual(self.game.buttons[0][0]["text"], "X")
-        self.assertEqual(self.game.current_player, "O")
+    # Test 8: Full game flow simulation (integration test)
+    @patch('builtins.input', side_effect=[
+        "Bob",      # name
+        "1",        # choose addition
+        "5", "10", "15", "20", "25", "30", "35", "40", "45", "50",  # 10 correct answers
+        "n"         # play again? no
+    ])
+    def test_full_game_perfect_score(self, mock_input):
+        # Capture all output
+        captured_output = StringIO()
+        sys.stdout = captured_output
 
-    def test_o_places_mark_correctly(self):
-        self.game.current_player = "O"
-        self.game.on_click(1, 1)
-        self.assertEqual(self.game.buttons[1][1]["text"], "O")
-        self.assertEqual(self.game.current_player, "X")
+        # Run the full program
+        import basic_math_program
+        sys.stdout = sys.__stdout__  # restore
 
-    def test_cannot_place_on_occupied_cell(self):
-        self.game.on_click(0, 0)  # X
-        current = self.game.current_player
-        self.game.on_click(0, 0)  # Try again
-        self.assertEqual(self.game.buttons[0][0]["text"], "X")
-        self.assertEqual(self.game.current_player, current)  # Didn't change
+        output = captured_output.getvalue()
+        self.assertIn("Bob", output)
+        self.assertIn("100%", output)
+        self.assertIn("PERFECT SCORE", output)
 
-    def test_x_wins_horizontal(self):
-        moves = [(0,0), (1,0), (0,1), (1,1), (0,2)]
-        for r, c in moves:
-            self.game.on_click(r, c)
-        self.assertTrue(self.game.check_winner("X"))
-        self.assertEqual(self.game.score_x, 1)
-        self.assertEqual(self.game.total_games, 1)
+    # Test 9: Wrong answers reduce score
+    @patch('builtins.input', side_effect=[
+        "TestUser",
+        "3",        # multiplication
+        "12", "12", "12", "12", "12", "12", "12", "12", "12", "999",  # 9 correct, 1 wrong
+        "n"
+    ])
+    def test_game_with_one_wrong_answer(self, mock_input):
+        captured_output = StringIO()
+        sys.stdout = captured_output
 
-    def test_x_wins_vertical(self):
-        moves = [(0,0), (0,1), (1,0), (1,1), (2,0)]
-        for r, c in moves:
-            self.game.on_click(r, c)
-        self.assertTrue(self.game.check_winner("X"))
+        import basic_math_program
+        sys.stdout = sys.__stdout__
 
-    def test_x_wins_diagonal_main(self):
-        moves = [(0,0), (0,1), (1,1), (0,2), (2,2)]
-        for r, c in moves:
-            self.game.on_click(r, c)
-        self.assertTrue(self.game.check_winner("X"))
-
-    def test_x_wins_diagonal_anti(self):
-        moves = [(0,2), (0,0), (1,1), (1,0), (2,0)]
-        for r, c in moves:
-            self.game.on_click(r, c)
-        self.assertTrue(self.game.check_winner("X"))
-
-    def test_o_can_win(self):
-        moves = [(1,0), (0,0), (1,1), (0,1), (1,2)]  # O wins column 1
-        for i, (r, c) in enumerate(moves):
-            self.game.current_player = "X" if i % 2 == 0 else "O"
-            self.game.on_click(r, c)
-        self.assertTrue(self.game.check_winner("O"))
-        self.assertEqual(self.game.score_o, 1)
-
-    def test_draw_game(self):
-        moves = [(0,0),(0,1),(0,2),(1,1),(1,2),(1,0),(2,1),(2,2),(2,0)]
-        players = ["X","O","X","O","X","O","X","O","X"]
-        for (r,c), p in zip(moves, players):
-            self.game.current_player = p
-            self.game.on_click(r, c)
-        self.assertTrue(self.game.is_draw())
-        self.assertEqual(self.game.total_games, 1)
-
-    def test_buttons_disabled_after_win(self):
-        for r, c in [(0,0), (1,0), (0,1), (1,1), (0,2)]:
-            self.game.on_click(r, c)
-        for r in range(3):
-            for c in range(3):
-                self.assertEqual(self.game.buttons[r][c]["state"], "disabled")
-
-    def test_reset_clears_board_but_keeps_score(self):
-        self.game.on_click(0, 0)
-        self.game.score_x = 5
-        self.game.reset_game()
-        self.assertEqual(self.game.current_player, "X")
-        self.assertEqual(self.game.score_x, 5)
-        for r in range(3):
-            for c in range(3):
-                self.assertEqual(self.game.buttons[r][c]["text"], "")
-
-    def test_xss_vulnerability_exists_intentionally(self):
-        # This test PROVES the XSS bug is present (as requested)
-        malicious_name = "<script>alert('XSS')</script>"
-        self.game.player_name_var.get.return_value = malicious_name
-
-        # X wins
-        for r, c in [(0,0), (1,0), (0,1), (1,1), (0,2)]:
-            self.game.on_click(r, c)
-
-        last_message = self.shown_messages[-1]
-        self.assertIn(malicious_name, last_message)
-        self.assertIn("Congratulations", last_message)
-        self.assertIn("You win as X", last_message)
+        output = captured_output.getvalue()
+        self.assertIn("9/10", output)
+        self.assertIn("90%", output)
+        self.assertIn("Excellent work", output)
 
 
 if __name__ == "__main__":
