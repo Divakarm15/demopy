@@ -43,7 +43,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=Divakarm15_demopy
-            -Dsonar.organization=ziegen28
+            -Dsonar.organization=divakarm15
             -Dsonar.sources=src
             -Dsonar.python.coverage.reportPaths=coverage.xml
         env:
