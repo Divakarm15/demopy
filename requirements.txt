@@ -1,0 +1,16 @@
+# requirements.txt
+# Tic-Tac-Toe (XO Game) - No external dependencies required
+
+# All modules used in the program are part of Python's standard library:
+# - tkinter      → included with Python
+# - random       → built-in
+# - time         → built-in
+# - winsound     → built-in on Windows (ignored on Linux/macOS)
+
+# Therefore, no third-party packages need to be installed.
+
+# OPTIONAL: If you want sound on Linux/macOS in the future, uncomment one of these:
+# pygame==2.6.1
+# playsound==1.3.0
+
+# For now: ZERO external packages → fastest & safest
