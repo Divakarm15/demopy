@@ -8,43 +8,83 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  sonarqube:
-    name: Unit Tests + SonarQube
+  test-sonar-zap:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
+      # 1. Checkout repository
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Required for SonarQube scan
+          fetch-depth: 0   # Required for SonarQube analysis
 
-      # Step 2: Setup Python
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      # 2. Setup Python
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # Step 3: Install dependencies
+      # 3. Install dependencies
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install coverage
 
-      # Step 4: Run Unit Tests with Coverage
+      # 4. Run unittests with coverage
       - name: Run Unit Tests with Coverage
         run: |
           coverage run -m unittest discover -s src -p "test*.py"
           coverage xml
 
-      # Step 5: SonarQube Scan
+      # 5. SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
-        with:
-          args: >
-            -Dsonar.projectKey=Divakarm15_demopy
-            -Dsonar.organization=divakarm15
-            -Dsonar.sources=src
-            -Dsonar.python.coverage.reportPaths=coverage.xml
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_SCANNER_OPTS: -Dsonar.python.coverage.reportPaths=coverage.xml
+        with:
+          args: >
+            -Dsonar.projectKey=ziegen28_sonarqube_python
+            -Dsonar.organization=ziegen28
+            -Dsonar.sources=src
+
+      # 6. Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t myapp:latest .
+
+      # 7. Create network and run your container
+      - name: Run Docker Container on Shared Network
+        run: |
+          docker network create zapnet
+          docker run -d --network zapnet --name myapp-container myapp:latest
+          sleep 15  # wait for app to start
+
+      # 8. OWASP ZAP Baseline Scan
+      - name: OWASP ZAP Scan
+        run: |
+          mkdir zap-output
+          chmod 777 zap-output
+          docker run --rm --network zapnet \
+            -v $(pwd)/zap-output:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:stable \
+            /zap/zap-baseline.py \
+            -t http://myapp-container:8001 \
+            --autooff \
+            -I \
+            -x zap-report.xml \
+            -r zap-report.html \
+            -J zap-report.json \
+            -w zap-warnings.md
+
+      # 9. Upload ZAP Report
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: zap-output/*
+
+      # 10. Stop and Remove Container
+      - name: Stop Container
+        run: |
+          docker stop myapp-container
+          docker rm myapp-container
+          docker network rm zapnet
