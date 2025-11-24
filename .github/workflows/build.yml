@@ -42,7 +42,7 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v6
         with:
           args: >
-            -Dsonar.projectKey=divakarm15_demopy
+            -Dsonar.projectKey=Divakarm15_demopy
             -Dsonar.organization=divakarm15
             -Dsonar.sources=src
             -Dsonar.python.coverage.reportPaths=coverage.xml
