@@ -9,8 +9,16 @@ class TicTacToe:
         self.current_player = "X"
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
 
-        self.create_board()
+        # === INTRODUCED XSS VULNERABILITY START ===
+        self.player_name_var = tk.StringVar(value="Player")
+        name_frame = tk.Frame(self.window)
+        name_frame.pack(pady=5)
+        tk.Label(name_frame, text="Your name:").pack(side=tk.LEFT)
+        self.name_entry = tk.Entry(name_frame, textvariable=self.player_name_var, width=15)
+        self.name_entry.pack(side=tk.LEFT, padx=5)
+        # === XSS VULNERABILITY END ===
 
+        self.create_board()
         self.window.mainloop()
 
     def create_board(self):
@@ -41,35 +49,32 @@ class TicTacToe:
     def on_click(self, row, col):
         btn = self.buttons[row][col]
 
-        # Ignore move if button occupied
         if btn["text"] != "":
             return
 
         btn["text"] = self.current_player
 
         if self.check_winner(self.current_player):
-            messagebox.showinfo("Game Over", f"Player {self.current_player} wins!")
+            # === XSS TRIGGER ===
+            player_name = self.player_name_var.get()                     # User-controlled input
+            malicious_message = f"Congratulations {player_name}!\nYou win as {self.current_player}!"
+            messagebox.showinfo("Game Over", malicious_message)         # Direct insertion → XSS
+            # === END OF XSS ===
             self.disable_all()
         elif self.is_draw():
             messagebox.showinfo("Game Over", "It's a draw!")
         else:
-            # Switch player
             self.current_player = "O" if self.current_player == "X" else "X"
 
     def check_winner(self, player):
         b = self.buttons
-
-        # Rows, columns, diagonals
         for i in range(3):
             if all(b[i][j]["text"] == player for j in range(3)): return True
             if all(b[j][i]["text"] == player for j in range(3)): return True
-
         if b[0][0]["text"] == player and b[1][1]["text"] == player and b[2][2]["text"] == player:
             return True
-
         if b[0][2]["text"] == player and b[1][1]["text"] == player and b[2][0]["text"] == player:
             return True
-
         return False
 
     def is_draw(self):
