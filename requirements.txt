@@ -1,17 +1,2 @@
 # requirements.txt
-# This program uses ONLY Python's built-in standard library
-# No external packages are required!
-
-# Built-in modules used:
-# - random
-# - time
-# - sys
-# - io (for StringIO in tests)
-# - unittest (for testing)
-
-# Therefore: ZERO dependencies to install
-
-# You can run this program on any Python 3.6+ installation with nothing to pip install
-
-# Optional: If you want to generate a coverage report later:
-# coverage.py>=7.0
+coverage>=7.0
